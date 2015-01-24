@@ -35,9 +35,10 @@ body {
     font-size: 40px;
 }
 
-.text-target, .text-typed {
+.text-target {
     margin-left: auto;
     margin-right: auto;
     width: 90%;
     display: block;
+    word-wrap: break-word;
 }
