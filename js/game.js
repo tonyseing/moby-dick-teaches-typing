@@ -7,6 +7,14 @@ app.game = (function() {
         return Bacon.fromPromise($.get(url));
     }
 
+    // needs to be refactored to reflect WPM instead of keys per second
+    function calculate_speed(keys, seconds) {
+        if (seconds !== 0)
+            return keys / seconds;
+        else
+            return 0;
+    }
+
     // declare the Game prototype
     function Game(book, progress) {
         this.book = { title: book, text: "" };
@@ -27,9 +35,9 @@ app.game = (function() {
     var cursor_location = 0;
     
     // creates a stream that emits the value 1 every second
-    var seconds_stream = Bacon.interval(1000, 1);
-    seconds_stream.onValue(function(val) {
-        console.log(val);
+    var seconds_passed = Bacon.interval(1000, 1).scan(0, function(a,b){ return a + b; });
+    seconds_passed.onValue(function(val) {
+        //console.log(val);
     });
 
     chunk_stream.onValue(function(val) { 
@@ -48,7 +56,9 @@ app.game = (function() {
             return a + b; 
         });
         cursor_location.onValue(function(val) { 
-            console.log(val);
+            //  console.log(val);
         });
+
+        Bacon.combineWith(calculate_speed, cursor_location, seconds_passed).log();
     });
 })();
