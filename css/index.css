@@ -2,6 +2,15 @@ body {
     font-family: helvetica, verdana, arial;
 }
 
+.correct {
+    color: green;
+}
+
+.incorrect {
+    color: red;
+    text-decoration: line-through;
+}
+
 .dashboard {
     width: 100%;
 }
