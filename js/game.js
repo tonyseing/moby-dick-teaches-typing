@@ -68,19 +68,19 @@ app.game = (function() {
     //
       // book stream with data about keys correctly/incorrectly typed 
     var output_stream = Bacon.zipWith(function(typed_key, target_text_char, cursor_location) {
-      return [cursor_location, target_text_char, target_text_char===typed_key];
+      return { cursor_location: cursor_location,
+               target_text_char: target_text_char,
+               correct_key: target_text_char===typed_key
+             };
     }, typed_keys, chunk_text_stream, cursor_location)//.merge(chunk_text_stream);
 
-  
-   
-    
     
     output_stream.onValue(function(val) { 
 
-      if (val[2]) // correct typed
-        $(".text-target > span:nth(" + val[0] + ")").addClass("correct");
+      if (val.correct_key) // correct typed
+        $(".text-target > span:nth(" + val.cursor_location + ")").addClass("correct");
       else // incorrectly typed character
-        $(".text-target > span:nth(" + val[0] + ")").addClass("incorrect");
+        $(".text-target > span:nth(" + val.cursor_location + ")").addClass("incorrect");
     });
 
     
