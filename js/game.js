@@ -2,7 +2,6 @@
 
 var app = app || {};
 
-
 app.game = (function() {
   function ajax(url) { 
     return Bacon.fromPromise($.get(url));
@@ -16,6 +15,8 @@ app.game = (function() {
     // keystrokes per minute
     var minute = seconds / 60;
     var words = keys / 5;
+
+    
     if (seconds !== 0)
       return Math.round(words / minute);
     else
@@ -34,12 +35,24 @@ app.game = (function() {
   // initialize a game
   var game = new Game("texts/mobydick.txt", 0);
   var book_stream = game.fetch_book();
-
-  var chunk_text_stream = book_stream.flatMap(Bacon.fromArray).take(200);
+  var buffer_length = 200;
+  var speed = 0;
+  var blacklist = [];
   
+  // create a text stream of the next 200 characters
+  var chunk_text_stream = book_stream
+      .flatMap(Bacon.fromArray)
+      .map(function(character) {
+        if (character !== "\r" && character !== "\n" && character !== "\t" && character !== '')
+          return character
+        else
+          return " "; 
+      }).take(buffer_length);
+
   
   // cursor always starts at 0
-  var cursor_location = 0;
+  var cursor_location;
+  var total_keys;
   
   // creates a stream that emits the value 1 every second
   var seconds_passed = Bacon.interval(1000, 1).scan(0, function(a,b){ return a + b; });
@@ -54,29 +67,34 @@ app.game = (function() {
           return String.fromCharCode(event.keyCode || event.which); 
         });
 
-    
-    cursor_location = typed_keys.map(1).scan(0, function(a,b) { 
-        return a + b; 
+    total_keys = typed_keys.map(1).scan(0, function(a,b) { 
+      return a + b;
     });
 
-    chunk_text_stream.onValue(function(val) {
-      $(".text-target").append("<span>" + val + "</span>");}                             );
+    cursor_location = typed_keys.map(1).scan(0, function(a,b) { 
+      return (a + b) % buffer_length; 
+    });
     
-    // Creates a stream of 2-tuples that represent
-    // [book_text_character, whether the typed key matched the target
-    // character ]
-    //
-      // book stream with data about keys correctly/incorrectly typed 
+    chunk_text_stream.onValue(function(val) {
+      var character = "";
+      if (val === " ")
+        $(".text-target").append("<span class='space'>_</span>");
+      else
+        $(".text-target").append("<span>" + val + "</span>");
+    });
+    
+
+    // book stream with data about keys correctly/incorrectly typed 
     var output_stream = Bacon.zipWith(function(typed_key, target_text_char, cursor_location) {
-      return { cursor_location: cursor_location,
-               target_text_char: target_text_char,
-               correct_key: target_text_char===typed_key
-             };
-    }, typed_keys, chunk_text_stream, cursor_location)//.merge(chunk_text_stream);
+      return {
+        cursor_location: cursor_location,
+        target_text_char: target_text_char,
+        correct_key: target_text_char===typed_key
+      };
+    }, typed_keys, chunk_text_stream, cursor_location)
 
     
     output_stream.onValue(function(val) { 
-
       if (val.correct_key) // correct typed
         $(".text-target > span:nth(" + val.cursor_location + ")").addClass("correct");
       else // incorrectly typed character
@@ -84,7 +102,8 @@ app.game = (function() {
     });
 
     
-    Bacon.combineWith(calculate_speed, cursor_location, seconds_passed).onValue(function(val) {
+    speed = Bacon.combineWith(calculate_speed, cursor_location, seconds_passed);
+    speed.onValue(function(val) {
       $(".speed").html(val);
     });
   });
