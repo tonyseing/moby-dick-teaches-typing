@@ -3,23 +3,20 @@
 var app = app || {};
 
 app.game = (function() {
+  // provides a readable function for taking a url as input, and then
+  // returning a stream representing the request / response
   function ajax(url) { 
     return Bacon.fromPromise($.get(url));
   } 
 
-  // needs to be refactored to reflect WPM instead of keys per second
+  // calculates words per minute (a word is five characters, not an
+  // actual word)
   function calculate_speed(keys, seconds) {
-    // according to http://www.typeonline.co.uk/typingspeed.php, words
-    // per minute is not measured by actual words per minute, but five
-    // keystrokes is equivalent to one word, so the measure is five
-    // keystrokes per minute
-    var minute = seconds / 60;
-    var words = keys / 5;
-
-    
-    if (seconds !== 0)
+    var minute = seconds / 60.0;
+    var words = keys / 5.0;
+    if (seconds > 0)
       return Math.round(words / minute);
-    else
+    else // nothing typed yet provide this conditional branch to prevent division by zero error
       return 0;
   }
 
@@ -38,46 +35,47 @@ app.game = (function() {
   var buffer_length = 200;
   var blacklist = [];
   // cursor always starts at 0
-  var cursor_location, total_keys, speed, output_stream, typed_keys, seconds_passed;
+  var cursor_location, total_keys, speed, output_stream, typed_keys, seconds_passed, chunk_text_stream, page;
 
+  typed_keys = $(window)
+    .asEventStream("keypress")
+    .map(function(event) {
+      event.preventDefault(); // prevents browser key shortcuts from firing
+      return String.fromCharCode(event.keyCode || event.which); 
+    });
+  
+  total_keys = typed_keys.map(1).scan(0, function(a,b) { 
+    return a + b;
+  });
+
+  // create a stream to represent the currrent page number
+  page = total_keys.map(function(key_total) {
+    return Math.floor(key_total / buffer_length);
+  });
+
+  page.onValue(function(val) {
+    console.log(val);
+  });
+  
   // create a text stream of the next 200 characters
-  var chunk_text_stream = book_stream
+  chunk_text_stream = book_stream
       .flatMap(Bacon.fromArray)
       .map(function(character) {
         if (character !== "\r" && character !== "\n" && character !== "\t" && character !== '')
           return character
         else
           return " "; 
-      }).take(buffer_length);
-
-  
+      }).skip(0).take(buffer_length);
   
   // creates a stream that emits the value 1 every second
+  // need to refactor this so that it does this 
   seconds_passed = Bacon.interval(1000, 1).scan(0, function(a,b){ return a + b; });
-  
-  
 
-  typed_keys = $(window)
-      .asEventStream("keypress")
-      .map(function(event) {
-        event.preventDefault(); // prevents browser key shortcuts
-        // from firing
-        return String.fromCharCode(event.keyCode || event.which); 
-      });
-
-  total_keys = typed_keys.map(1).scan(0, function(a,b) { 
-    return a + b;
-  });
 
   cursor_location = total_keys.map(function(total, buffer) {
     return total % buffer_length;
   });
 
-  
-  cursor_location.onValue(function(val) { console.log(val);
-                                 })
-
-  
   chunk_text_stream.onValue(function(val) {
     var character = "";
     if (val === " ")
