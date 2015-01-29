@@ -53,46 +53,48 @@ app.game = (function() {
     return Math.floor(key_total / buffer_length);
   });
 
-  page.onValue(function(val) {
-    console.log(val);
-  });
-  
   // create a text stream of the next 200 characters
+  // returns a stream of array values
   chunk_text_stream = book_stream
-      .flatMap(Bacon.fromArray)
-      .map(function(character) {
-        if (character !== "\r" && character !== "\n" && character !== "\t" && character !== '')
-          return character
-        else
-          return " "; 
-      }).skip(0).take(buffer_length);
-  
+  // replace all multiple spaces with a single space
+    .map(function(book) {
+      return book.replace(/\s{2,}/g, " ");
+    })
+  // turn stream of one event to a stream of signals made of single
+  // characters in the book
+    .flatMap(Bacon.fromArray)
+  // reduce the number of characters in window to buffer_length
+    .take(buffer_length);
+ //   .bufferWithCount(buffer_length);
+
   // creates a stream that emits the value 1 every second
   // need to refactor this so that it does this 
   seconds_passed = Bacon.interval(1000, 1).scan(0, function(a,b){ return a + b; });
-
 
   cursor_location = total_keys.map(function(total, buffer) {
     return total % buffer_length;
   });
 
-  chunk_text_stream.onValue(function(val) {
-    var character = "";
-    if (val === " ")
-      $(".text-target").append("<span class='space'>_</span>");
-    else
-      $(".text-target").append("<span>" + val + "</span>");
+  chunk_text_stream.onValue(function(text_arr) {
+    
+    if (text_arr === " ")
+        $(".text-target").append("<span class='space'>_</span>");
+      else
+        $(".text-target").append("<span>" + text_arr + "</span>");
+    
+    
   });
   
 
   // book stream with data about keys correctly/incorrectly typed 
   output_stream = Bacon.zipWith(function(typed_key, target_text_char, cursor_location) {
+    
     return {
       cursor_location: cursor_location,
       target_text_char: target_text_char,
       correct_key: target_text_char===typed_key
     };
-  }, typed_keys, chunk_text_stream, cursor_location)
+  }, typed_keys, chunk_text_stream, cursor_location);
 
   
   output_stream.onValue(function(val) { 
