@@ -20,23 +20,27 @@ app.game = (function() {
       return 0;
   }
 
+  function fetch_book(book_title) {
+      return ajax(book_title);
+  }
+  
   // declare the Game prototype
   function Game(book, progress) {
     this.book = { title: book, text: "" };
     this.progress = progress; // point in text that player has reached
-    this.fetch_book = function() {
-      return ajax(this.book.title);
-    }.bind(this);
   }
 
   // initialize a game
   var game = new Game("texts/mobydick.txt", 0);
-  var book_stream = game.fetch_book();
-  var buffer_length = 200;
+  var book_stream = fetch_book(game.book.title);
+  var buffer_length = 5;
   var blacklist = [];
   // cursor always starts at 0
   var cursor_location, total_keys, speed, output_stream, typed_keys, seconds_passed, chunk_text_stream, page;
 
+ 
+
+  
   typed_keys = $(window)
     .asEventStream("keypress")
     .map(function(event) {
@@ -76,26 +80,20 @@ app.game = (function() {
   });
 
   chunk_text_stream.onValue(function(text_arr) {
-    
     if (text_arr === " ")
         $(".text-target").append("<span class='space'>_</span>");
-      else
+    else
         $(".text-target").append("<span>" + text_arr + "</span>");
-    
-    
   });
-  
 
   // book stream with data about keys correctly/incorrectly typed 
   output_stream = Bacon.zipWith(function(typed_key, target_text_char, cursor_location) {
-    
     return {
       cursor_location: cursor_location,
       target_text_char: target_text_char,
       correct_key: target_text_char===typed_key
     };
   }, typed_keys, chunk_text_stream, cursor_location);
-
   
   output_stream.onValue(function(val) { 
     if (val.correct_key) // correct typed
@@ -103,7 +101,6 @@ app.game = (function() {
     else // incorrectly typed character
       $(".text-target > span:nth(" + val.cursor_location + ")").addClass("incorrect");
   });
-
   
   speed = Bacon.combineWith(calculate_speed, total_keys, seconds_passed);
   speed.onValue(function(val) {
