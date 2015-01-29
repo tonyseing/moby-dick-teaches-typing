@@ -50,17 +50,18 @@ app.game = (function() {
   
   total_keys = typed_keys.map(1).scan(0, function(a,b) { 
     return a + b;
-  });
+  }).toProperty();
 
   // create a stream to represent the currrent page number
   page = total_keys.map(function(key_total) {
     return Math.floor(key_total / buffer_length);
-  });
+  }).toProperty();
 
+  
   // create a text stream of the next 200 characters
   // returns a stream of array values
   chunk_text_stream = book_stream
-  // replace all multiple spaces with a single space
+  // replace in book (string) all multiple spaces with a single space
     .map(function(book) {
       return book.replace(/\s{2,}/g, " ");
     })
@@ -68,9 +69,11 @@ app.game = (function() {
   // characters in the book
     .flatMap(Bacon.fromArray)
   // reduce the number of characters in window to buffer_length
+    .skip(buffer_length * page)
     .take(buffer_length);
  //   .bufferWithCount(buffer_length);
 
+  
   // creates a stream that emits the value 1 every second
   // need to refactor this so that it does this 
   seconds_passed = Bacon.interval(1000, 1).scan(0, function(a,b){ return a + b; });
