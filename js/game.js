@@ -30,16 +30,17 @@ app.game = (function() {
     this.progress = progress; // point in text that player has reached
   }
 
+  function clear_display() {
+    $(".text-target").html("");
+  }
+
   // initialize a game
   var game = new Game("texts/mobydick.txt", 0);
   var book_stream = fetch_book(game.book.title);
-  var buffer_length = 5;
+  var buffer_length = 300;
   var blacklist = [];
   // cursor always starts at 0
-  var cursor_location, total_keys, speed, output_stream, typed_keys, seconds_passed, chunk_text_stream, page;
-
- 
-
+  var cursor_location, total_keys, speed, output_stream, typed_keys, seconds_passed, sanitized_text_stream, page;
   
   typed_keys = $(window)
     .asEventStream("keypress")
@@ -55,24 +56,24 @@ app.game = (function() {
   // create a stream to represent the currrent page number
   page = total_keys.map(function(key_total) {
     return Math.floor(key_total / buffer_length);
-  }).toProperty();
+  }).skipDuplicates();
 
+
+  page.onValue(clear_display);
+                
   
   // create a text stream of the next 200 characters
   // returns a stream of array values
-  chunk_text_stream = book_stream
-  // replace in book (string) all multiple spaces with a single space
+  sanitized_text_stream = book_stream
+  // replace in book (string) all multiple spaces with a single space,
     .map(function(book) {
-      return book.replace(/\s{2,}/g, " ");
-    })
-  // turn stream of one event to a stream of signals made of single
-  // characters in the book
-    .flatMap(Bacon.fromArray)
-  // reduce the number of characters in window to buffer_length
-    .skip(buffer_length * page)
-    .take(buffer_length);
- //   .bufferWithCount(buffer_length);
+      return Bacon.fromArray(book.replace(/\s{2,}/g, " "));
+    });
 
+
+  var text_chunk = Bacon.combineWith(function(text_stream, page) {
+    return text_stream.take(buffer_length);
+  }, sanitized_text_stream, page).flatMap(function(val) { return val; });
   
   // creates a stream that emits the value 1 every second
   // need to refactor this so that it does this 
@@ -82,7 +83,7 @@ app.game = (function() {
     return total % buffer_length;
   });
 
-  chunk_text_stream.onValue(function(text_arr) {
+  text_chunk.onValue(function(text_arr) {
     if (text_arr === " ")
         $(".text-target").append("<span class='space'>_</span>");
     else
@@ -96,7 +97,7 @@ app.game = (function() {
       target_text_char: target_text_char,
       correct_key: target_text_char===typed_key
     };
-  }, typed_keys, chunk_text_stream, cursor_location);
+  }, typed_keys, text_chunk, cursor_location);
   
   output_stream.onValue(function(val) { 
     if (val.correct_key) // correct typed
