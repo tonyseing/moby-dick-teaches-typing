@@ -15,9 +15,16 @@ app.game = (function() {
     var minute = seconds / 60.0;
     var words = keys / 5.0;
     if (seconds > 0)
-      return Math.round(words / minute);
+      return words / minute;
     else // nothing typed yet provide this conditional branch to prevent division by zero error
       return 0;
+  }
+
+  function calculate_accuracy(correct_keys, total_keys) {
+    if (total_keys === 0)
+      return 0;
+    else
+      return (correct_keys / total_keys) * 100;
   }
 
   function fetch_book(book_title) {
@@ -58,9 +65,7 @@ app.game = (function() {
     return Math.floor(key_total / buffer_length);
   }).skipDuplicates();
 
-
   page.onValue(clear_display);
-                
   
   // create a text stream of the next 200 characters
   // returns a stream of array values
@@ -84,10 +89,7 @@ app.game = (function() {
   });
 
   text_chunk.onValue(function(text_arr) {
-    if (text_arr === " ")
-        $(".text-target").append("<span class='space'>_</span>");
-    else
-        $(".text-target").append("<span>" + text_arr + "</span>");
+    $(".text-target").append("<span>" + text_arr + "</span>");
   });
 
   // book stream with data about keys correctly/incorrectly typed 
@@ -105,10 +107,16 @@ app.game = (function() {
     else // incorrectly typed character
       $(".text-target > span:nth(" + val.cursor_location + ")").addClass("incorrect");
   });
+
+  var correct_keys = output_stream.filter(function(output) { return output.correct_key }).map(1).scan(0, function(a,b) { return a + b; });
+  var accuracy = Bacon.combineWith(calculate_accuracy, correct_keys, total_keys);
+  accuracy.onValue(function (val) {
+    $(".accuracy").html(Math.round(val) + "%");
+  })
   
   speed = Bacon.combineWith(calculate_speed, total_keys, seconds_passed);
   speed.onValue(function(val) {
-    $(".speed").html(val);
+    $(".speed").html(Math.round(val));
   });
 
 })();

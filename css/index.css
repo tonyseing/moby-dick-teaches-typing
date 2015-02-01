@@ -1,5 +1,5 @@
 body {
-    font-family: helvetica, verdana, arial;
+    font-family: "Courier New", helvetica, verdana, arial;
 }
 
 .space {
@@ -8,34 +8,42 @@ body {
 }
 
 .correct {
-    color: green;
+
+    background-color: #e5e5e5;
 }
 
 .incorrect {
-    color: red;
+
+    background-color: rgba(255, 0, 0, 0.47);
     
 }
 
 .dashboard {
-    width: 100%;
-}
-
-.speed-display {
-    width: 350px;
+    width: 700px;
     margin-left: auto;
     margin-right: auto;
     display: block;
-    font-size: 50px;
+    margin-bottom: 100px;
+    height: 120px;
+}
+
+.speed-display, .accuracy-display {
+    font-size: 45px;
     color: darkgrey;
-    border: 1px solid darkgrey;
-    text-align: middle;
+    
+}
+
+.speed-label, .accuracy-label {
+    width: 375px;
+}
+
+.speed, .accuracy {
+    
 }
 
 .text-target {
+    clear: both;
     font-size: 40px;
-}
-
-.text-target {
     margin-left: auto;
     margin-right: auto;
     width: 90%;
