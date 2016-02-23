@@ -1,4 +1,4 @@
-### Ghost American Novel
+### Moby Dick Teaches Typing
 
 * During the 1950s, Hunter S. Thompson, typed out The Great Gatsby repeatedly
   in order to learn how to write The Great American Novel. This web app allows
